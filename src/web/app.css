@@ -480,6 +480,12 @@ label.with-help, .with-help { display: inline-flex; align-items: center; gap: 6p
 .ctl-grid .btn-row + .ctl-label { margin-top: 6px; }
 .ctl-label { color: var(--muted); font-size: 12.5px; display: inline-flex; align-items: center; gap: 6px; }
 .ctl-grid .btn-row { flex-wrap: wrap; gap: 6px; }
+/* materials page */
+.mat-bar { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 6px 8px 6px 12px; margin: 0 0 8px; border-radius: 10px; background: var(--deep); color: var(--muted); font-size: 12.5px; box-shadow: 0 6px 14px rgba(0, 0, 0, .18); }
+.mat-bar.dirty { background: var(--accent-soft); color: #c9cdfb; }
+.mat-meta { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; margin: 0 0 4px; overflow-wrap: anywhere; }
+.mat-swatch { width: 20px; height: 20px; border-radius: 5px; object-fit: cover; flex: none; box-shadow: 0 0 0 1px rgba(255, 255, 255, .1);
+  background: repeating-conic-gradient(#45474e 0 25%, #2b2d31 0 50%) 50% / 8px 8px; }   /* checkerboard behind see-through textures */
 .next-step { display: flex; align-items: center; gap: 9px; padding: 9px 12px; border-radius: 10px; background: var(--accent-soft); color: #c9cdfb; font-size: 13px; }
 .path-line { margin-top: 6px; font-family: var(--mono); font-size: 11.5px; color: #c9cdfb; background: var(--deep); padding: 6px 9px; border-radius: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; direction: rtl; text-align: left; }
 

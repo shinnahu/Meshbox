@@ -46,6 +46,13 @@ public static class Program
                         $"version={h?.Version} compression={h?.Compression} format={h?.FormatVersion} ptr={h?.PointerSize} thumb={(png != null ? png.Length + " bytes" : "none")}");
                     return png != null ? 0 : 2;
                 }
+                case "--fbx-check" when args.Length >= 3:
+                {
+                    // Diagnostics: --fbx-check <out.txt> <file.fbx>... (can Meshbox save material changes into it?)
+                    var lines = args.Skip(2).Select(f => $"{FbxEdit.Check(f)}\t{f}");
+                    File.WriteAllLines(args[1], lines);
+                    return 0;
+                }
             }
         }
 

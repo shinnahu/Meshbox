@@ -8,23 +8,24 @@ three.js viewport, made for getting models into Unity at the right size, facing 
 
 ## Install
 
-Build it (below), then run **`dist\MeshboxSetup.exe`** (one file, about 10 MB, no admin rights needed).
+Download **MeshboxSetup.exe** from the [latest release](https://github.com/shinnahu/meshbox/releases/latest)
+and run it (one file, about 10 MB, no admin rights needed), or build it yourself (below).
 The setup window shows where Meshbox goes and its progress: it installs Meshbox for your Windows account
 in `%LOCALAPPDATA%\Programs\Meshbox`, adds it to the Start menu and to "Open with" for 3D files, and to
 Settings > Apps for uninstalling. Running it again updates Meshbox (closing it first if it is open) and
 keeps your settings, thumbnails and library. `MeshboxSetup.exe /quiet [/desktop]` installs without any
 window, `/demo` walks through the screens without installing anything.
 
+Meshbox needs the [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) and the Edge
+WebView2 runtime (part of Windows 11). `.blend` previews and FBX export use the newest Blender found (Steam,
+Program Files, or the path set in Settings). Uninstall from Settings → Apps.
+
+To build it (needs Node.js 18+ and the .NET 8 SDK):
+
 ```powershell
 .\build.ps1      # UI bundle, the app in .\dist\Meshbox and the installer .\dist\MeshboxSetup.exe
 .\install.ps1    # (while developing) installs .\dist\Meshbox directly, same result as the setup
 ```
-
-Building needs Node.js 18+ and the .NET 8 SDK.
-
-Needs the .NET 8 Desktop Runtime and the Edge WebView2 runtime
-(part of Windows 11). `.blend` previews and FBX export use the newest Blender found (Steam, Program Files,
-or the path set in Settings). Uninstall from Settings → Apps.
 
 To make it the default app for `.fbx`: right-click an FBX → Open with → Choose another app →
 Meshbox → Always.
@@ -80,6 +81,15 @@ being open or closed) and the explanations behind small `?` icons.
   (optionally with `Assets/Editor/MeshboxModelImporter.cs`, which sets the import settings, a Humanoid
   avatar and URP/Standard materials from the manifest).
 - **Quick export (no Blender)**: GLB of what you see.
+
+## Materials (`M`)
+
+Change a model's materials and save them into the FBX itself, without Blender: per material, **Emission**
+on/off and its strength, and **Roughness** (Unity imports it as Smoothness = 1 - Roughness). Changes
+show in the viewer right away; **Save** writes only those values into the file (stored the way Blender
+and Unity read them back), everything else in the FBX stays byte for byte the same. The previous file
+goes to the Recycle Bin and a copy stays in Meshbox's backups. Works with binary FBX (what Blender, Maya
+and Unity write); other formats show their materials read-only.
 
 ## Library
 
@@ -163,7 +173,7 @@ T_<Asset>_<Part>_<Map>.png      T_Hero_Body_BaseColor.png   T_Hero_Body_Normal.p
 
 ```
 src/Host     .NET 8 WPF + WebView2 host: window, file server with texture search, .blend thumbnails,
-             Blender runner, library/Unity helpers, Explorer integration
+             Blender runner, library/Unity helpers, Explorer integration, FBX material editing
 src/web      UI (three.js r187 bundled by esbuild): viewer, panels, library
 src/blender  Blender scripts: preview.py, export_fbx.py, organize.py, meshbox_milestones.py (add-on)
 src/unity    MeshboxModelImporter.cs (optional Unity editor script)

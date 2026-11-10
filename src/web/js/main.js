@@ -399,6 +399,7 @@ function wireKeys() {
       case 'KeyA': if (!fly) togglePanel('anim'); break;
       case 'KeyE': if (!fly) togglePanel('export'); break;
       case 'KeyS': if (!fly) togglePanel('size'); break;
+      case 'KeyM': togglePanel('materials'); break;
       case 'Space': if (!fly && viewer.anim.clips.length) { e.preventDefault(); viewer.anim.toggle(); } break;
       case 'Slash': case 'F1': $('#sideTools [data-tip^="Controls"]')?.click(); break;
       default: return;

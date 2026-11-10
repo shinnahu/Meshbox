@@ -1,9 +1,10 @@
 // Left panel pages: Info · Animations · Size & facing · Export (FBX for Unity, Send to Unity, GLB).
 import * as THREE from 'three';
 import { app, savePrefs, entry, updateEntry } from '../app.js';
-import { h, ic, $, $$, setChildren, fmtNum, fmtBytes, fmtCm, fmtDateTime, toast, seg, toggleRow, showMenu, confirmDialog, help, toUnit, fromUnit, lengthUnitLabel } from '../dom.js';
+import { h, ic, $, $$, setChildren, fmtNum, fmtBytes, fmtCm, fmtDateTime, toast, seg, toggleRow, sliderRow, showMenu, confirmDialog, help, toUnit, fromUnit, lengthUnitLabel } from '../dom.js';
 import { call, on as onHost, newJobId, basename, dirname, extname, stem, joinPath } from '../host.js';
 import { clipName } from './stage.js';
+import { makeThumb } from '../library/library.js';
 
 let viewer;
 let panelEl;
@@ -11,6 +12,7 @@ const PANELS = {
   info: { title: 'Model info', render: renderInfo },
   anim: { title: 'Animations', render: renderAnim },
   size: { title: 'Size & facing', render: renderSize },
+  materials: { title: 'Materials', render: renderMaterials },
   export: { title: 'Export', render: renderExportPage },
 };
 
@@ -293,6 +295,114 @@ function group(id, title, iconName, opts = {}, ...children) {
 
 /** A form row: label (with an optional "?") above the control. */
 const fieldRow = (label, helpText, ...control) => h('div.field', h('label.with-help', h('span', label), helpText ? help(helpText) : null), ...control);
+
+// ================================================================= MATERIALS
+// A few material values, changed the way FBX stores them so Blender and Unity read them back the same:
+// emission strength (EmissiveFactor) and roughness (Shininess). Edits show right away; Save writes them into
+// the FBX itself (host: FbxEdit), nothing else in the file changes.
+const matEdit = { model: null, path: null, pending: new Map(), file: new Map() };
+const fbxRoughness = (s) => 1 - Math.sqrt(Math.min(Math.max(s ?? 30, 0), 100)) / 10;
+const fbxShininess = (r) => +(((1 - r) * 10) ** 2).toFixed(4);
+
+function renderMaterials(body, info) {
+  const path = info.sourcePath;
+  const st = matEdit;
+  if (st.model !== viewer.model) {
+    if (st.pending.size) toast('Unsaved material changes were dropped.');
+    Object.assign(st, { model: viewer.model, path });
+    st.pending.clear();
+    st.file.clear();
+  }
+  const list = viewer.materials();
+  if (!list.length) { body.append(h('div.panel-empty', 'This model has no materials.')); return; }
+  if (extname(path) !== '.fbx') {
+    body.append(h('div.banner.compact', ic('info', 15), h('div.grow', 'Changing materials and saving them into the file works with FBX models.')));
+    for (const { material: m, meshes } of list) body.append(group(`mat:${m.name}`, m.name || '(unnamed)', 'droplet', { badge: swatch(m) }, h('div.mat-meta', ic('box', 13), meshes.join(', '))));
+    return;
+  }
+
+  const bar = h('div.mat-bar');
+  const count = () => [...st.pending.values()].reduce((n, p) => n + ('EmissiveFactor' in p) + ('Shininess' in p), 0);
+  const updateBar = () => {
+    const n = count();
+    bar.classList.toggle('dirty', n > 0);
+    setChildren(bar,
+      h('span.grow', n ? `${n} unsaved change${n > 1 ? 's' : ''}` : 'Changes show right away'),
+      help('Save writes the new values into the FBX file itself; nothing else in it changes. The previous file goes to the Recycle Bin and a copy stays in Meshbox\'s backups. Blender and Unity read the values the same way.'),
+      n ? h('button.btn.small.ghost', { onclick: revert }, 'Revert') : null,
+      h('button.btn.small.primary', { disabled: !n, onclick: save }, ic('save', 15), 'Save'));
+  };
+  const mark = (name, props, isFileValue) => {
+    const cur = { ...(st.pending.get(name) || {}) };
+    for (const [k, v] of Object.entries(props)) { if (isFileValue) delete cur[k]; else cur[k] = v; }
+    if (Object.keys(cur).length) st.pending.set(name, cur); else st.pending.delete(name);
+    updateBar();
+  };
+  const setEmission = (m, v) => viewer.editMaterial(m, (x) => { if ('emissiveIntensity' in x) x.emissiveIntensity = v; });
+  const setRoughness = (m, r) => viewer.editMaterial(m, (x, mode) => {
+    if (x === m) x.shininess = fbxShininess(r);
+    else if (mode === 'textured' && x.isMeshStandardMaterial) x.roughness = Math.max(0.04, r);
+  });
+  const revert = () => {
+    for (const { material: m } of list) {
+      const f = st.file.get(m);
+      if (!f) continue;
+      setEmission(m, f.emission);
+      if (m.isMeshPhongMaterial) setRoughness(m, f.roughness);
+    }
+    st.pending.clear();
+    refreshPanel();
+  };
+  const save = async () => {
+    const changes = Object.fromEntries(st.pending);
+    try {
+      const r = await call('fbx.setMaterials', { path, changes });
+      for (const { material: m } of list) st.file.set(m, { emission: m.emissiveIntensity, roughness: fbxRoughness(m.shininess) });
+      st.pending.clear();
+      toast(r.recycled ? `Saved ${basename(path)}. The previous version is in the Recycle Bin.` : `Saved ${basename(path)}. A copy of the previous version is in Meshbox's backups.`, { kind: 'ok' });
+      refreshPanel();
+      // the library card should show the new look
+      call('fs.stat', { path }).then((s) => makeThumb({ path, ext: '.fbx', modified: s.modified })).catch(() => {});
+    } catch (e) {
+      toast(`Could not save: ${e.message || e}`, { kind: 'bad' });
+    }
+  };
+
+  body.append(bar);
+  for (const { material: m, meshes } of list) {
+    const name = m.name || '';
+    if (!st.file.has(m)) st.file.set(m, { emission: m.emissiveIntensity ?? 1, roughness: fbxRoughness(m.shininess) });
+    const file = st.file.get(m);
+    const kids = [h('div.mat-meta', ic('box', 13), meshes.join(', '))];
+    const glows = !!m.emissiveMap || (m.emissive && m.emissive.getHex() !== 0);
+    if (glows) {
+      let last = m.emissiveIntensity > 0 ? m.emissiveIntensity : (file.emission > 0 ? file.emission : 1);
+      const apply = (v) => { setEmission(m, v); mark(name, { EmissiveFactor: +v.toFixed(4) }, Math.abs(v - file.emission) < 1e-4); };
+      const strength = sliderRow(0, 10, 0.05, m.emissiveIntensity, (v) => { if (v > 0) last = v; apply(v); toggle.setValue(v > 0); },
+        { fmt: (v) => (+v).toFixed(2), def: +file.emission.toFixed(2) });
+      const toggle = toggleRow('Emission', m.emissiveMap ? 'Glows with its texture' : 'Glows with its color', m.emissiveIntensity > 0,
+        (on) => { const v = on ? last : 0; apply(v); strength.setValue(v); });
+      kids.push(toggle, fieldRow('Strength', 'How bright the glow is (the FBX EmissiveFactor: Blender reads it as Emission Strength, Unity as the emission intensity). 0 turns it off.', strength));
+    } else kids.push(h('div.note', 'No emission'));
+    if (m.isMeshPhongMaterial) {
+      const rough = sliderRow(0, 1, 0.01, +fbxRoughness(m.shininess).toFixed(2), (r) => {
+        setRoughness(m, r);
+        const s = fbxShininess(r);
+        mark(name, { Shininess: s, ShininessExponent: s }, Math.abs(r - file.roughness) < 0.005);
+      }, { fmt: (v) => (+v).toFixed(2), def: +file.roughness.toFixed(2) });
+      kids.push(fieldRow('Roughness', '0 is glossy like a mirror, 1 is fully matte. Unity imports it as Smoothness = 1 - Roughness, Blender as Roughness.', rough));
+    }
+    body.append(group(`mat:${name}`, name || '(unnamed)', 'droplet', { badge: swatch(m) }, ...kids));
+  }
+  updateBar();
+}
+
+/** A small preview of the material's base color (texture or color) for its group header. */
+function swatch(m) {
+  const src = m.map?.source?.data?.currentSrc || m.map?.source?.data?.src;
+  if (src) return h('img.mat-swatch', { src, alt: '' });
+  return h('span.mat-swatch', { style: { background: m.color ? `#${m.color.getHexString()}` : 'transparent' } });
+}
 
 function renderSize(body, info) {
   const fix = viewer.fix;

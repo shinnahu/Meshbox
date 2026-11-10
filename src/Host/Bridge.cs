@@ -258,6 +258,9 @@ public sealed class Bridge : IDisposable
             }
             case "fs.recycle":
                 return await Task.Run(() => LibraryService.Recycle(L(a, "paths")));
+            case "fbx.setMaterials":
+                return await Task.Run(() => FbxEdit.SetMaterials(S(a, "path"),
+                    a["changes"] as JsonObject ?? throw new ArgumentException("Missing 'changes'")));
             case "fs.writeBase64":
             {
                 var p = S(a, "path");

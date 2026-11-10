@@ -285,6 +285,28 @@ export class Viewer extends EventTarget {
   // ---------------------------------------------------------------- loop
   requestRender() { this.dirty = true; }
 
+  /** The model's own materials (not the view-mode copies), each with the meshes that use it. */
+  materials() {
+    const out = new Map();
+    for (const e of this.modes?.entries || []) {
+      for (const m of [].concat(e.original)) {
+        if (!m) continue;
+        if (!out.has(m)) out.set(m, { material: m, meshes: [] });
+        const name = e.mesh.name || '(mesh)';
+        if (!out.get(m).meshes.includes(name)) out.get(m).meshes.push(name);
+      }
+    }
+    return [...out.values()];
+  }
+
+  /** Changes a loaded material and its copies in every view mode: apply(material, mode) ('original' for the model's own). */
+  editMaterial(mat, apply) {
+    apply(mat, 'original');
+    this.modes?.forCopies(mat, apply);
+    this.shadowDirty = true;
+    this.requestRender();
+  }
+
   tick() {
     const dt = Math.min(this.clock.getDelta(), 0.1);
     let changed = this.dirty;

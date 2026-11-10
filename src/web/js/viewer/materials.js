@@ -241,6 +241,15 @@ export class MaterialModes {
     for (const e of this.entries) e.mesh.material = this.get(e, mode);
   }
 
+  /** Calls fn(copy, mode) for every view-mode material made from `mat` (Materials page edits). */
+  forCopies(mat, fn) {
+    for (const e of this.entries) {
+      for (const [mode, m] of e.cache) {
+        for (const x of [].concat(m)) if (x && x !== mat && x.userData.source === mat) fn(x, mode);
+      }
+    }
+  }
+
   /** Temporarily render with another material set (post passes), then restore. */
   with(mode, fn) {
     const prev = this.mode;
