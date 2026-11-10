@@ -1,6 +1,6 @@
 // Library: every model in your library folder + scanned project folders, grouped into version families,
 // with consistent thumbnails (front view, +Z), filters, a versions drawer and a cleanup page.
-import { app, entry, updateEntry, thumbUrl, saveThumbnail, savePrefs, saveIndex, on as onApp } from '../app.js';
+import { app, entry, updateEntry, thumbUrl, saveThumbnail, savePrefs, saveIndex, thumbOutdated, on as onApp } from '../app.js';
 import { h, ic, $, setChildren, showMenu, toast, confirmDialog, promptDialog, fmtBytes, fmtDate, fmtNum, fmtCm, timeAgo, debounce, modal } from '../dom.js';
 import { call, basename, dirname, extname, stem, blendThumbUrl, fileUrl, newJobId, on as onHost } from '../host.js';
 import { hydrateIcons } from '../icons.js';
@@ -488,7 +488,8 @@ function card(it) {
     onclick: () => app.actions.open(f.path),
     oncontextmenu: (ev) => { ev.preventDefault(); cardMenu(ev, it); },
   }, pic, h('div.meta', h('div.title', fam ? fam.display : f.name), h('div.sub', sub)));
-  el.dataset.thumbless = !t && AUTO_THUMB.has(f.ext) ? '1' : '';
+  // no thumbnail yet, or one drawn before the viewer's last material fixes (the old one shows meanwhile)
+  el.dataset.thumbless = (!t || thumbOutdated(f.path)) && AUTO_THUMB.has(f.ext) ? '1' : '';
   return el;
 }
 
@@ -753,7 +754,7 @@ async function pump() {
     while (queue.length && !paused && !root.hidden) {
       const path = queue.shift();
       const f = state.files.find((x) => x.path === path);
-      if (!f || (entry(path)?.thumb && entry(path)?.thumbFor === f.modified)) continue;
+      if (!f || (entry(path)?.thumb && entry(path)?.thumbFor === f.modified && !thumbOutdated(path))) continue;
       updateStatus(`Thumbnail: ${f.name} (${queue.length} left)`);
       try { await makeThumb(f); } catch (e) { console.warn('thumb failed', path, e); updateEntry(path, { thumbError: String(e.message || e) }); }
       await new Promise((r) => setTimeout(r, 30));

@@ -60,9 +60,17 @@ export async function saveThumbnail(path, blob, { manual = false, modelStamp } =
   if (!blob) return null;
   const data = await blobToBase64(blob);
   const thumb = await call('library.saveThumb', { path, data });
-  updateEntry(path, { thumb, thumbAt: new Date().toISOString(), thumbFor: modelStamp || null, thumbManual: manual });
+  updateEntry(path, { thumb, thumbAt: new Date().toISOString(), thumbFor: modelStamp || null, thumbManual: manual, thumbVer: THUMB_VERSION });
   return thumb;
 }
+
+/**
+ * Bump when the viewer draws FBX/OBJ/Collada/3DS materials differently: their automatic thumbnails are made
+ * again in the background (2: alpha, roughness and colors read the way Blender and Unity read them).
+ */
+export const THUMB_VERSION = 2;
+export const thumbOutdated = (path, e = entry(path)) =>
+  !!e?.thumb && !e.thumbManual && /\.(fbx|obj|dae|3ds)$/i.test(path) && (e.thumbVer || 1) < THUMB_VERSION;
 
 export function blobToBase64(blob) {
   return new Promise((resolve, reject) => {

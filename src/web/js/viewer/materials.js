@@ -88,7 +88,7 @@ const hasAlphaChannel = (t, cache) => { const k = alphaKind(t, 'a', cache); retu
 
 /**
  * Call once per loaded model (legacy formats, textures loaded). `fbx`: roughness from Shininess the way
- * Blender writes it and Unity reads it, and emission textures used as FBX defines them.
+ * Blender writes it and Unity reads it, and textures on color slots used as FBX defines them.
  */
 export function fixLegacyMaterials(root, { fbx = false } = {}) {
   const cache = new Map();
@@ -97,9 +97,15 @@ export function fixLegacyMaterials(root, { fbx = false } = {}) {
     for (const m of (Array.isArray(o.material) ? o.material : [o.material])) {
       if (!m || done.has(m)) continue;
       done.add(m);
-      if (fbx) m.userData.fbxShininess = true;
-      // A texture on EmissiveColor replaces the color (FBX, Blender and Unity agree); FBXLoader keeps it black.
-      if (fbx && m.emissiveMap && m.emissive && m.emissive.getHex() === 0 && (m.emissiveIntensity ?? 1) > 0) m.emissive.set(0xffffff);
+      if (fbx) {
+        m.userData.fbxShininess = true;
+        // In FBX a texture on a color slot replaces the stored color (Blender and Unity read it that way).
+        // Blender still writes the socket's leftover value (0.8 gray by default, black for emission) and
+        // FBXLoader multiplied it in: textures came out darker or tinted, emission maps stayed dark.
+        // The emission map can be any texture (a glow mask, lit windows...), its strength is EmissiveFactor.
+        if (m.map && m.color) m.color.set(0xffffff);
+        if (m.emissiveMap && m.emissive) m.emissive.set(0xffffff);
+      }
       if (!m.map && !m.alphaMap) continue;
       if (!(m.transparent || m.alphaMap || m.alphaTest > 0)) continue;
       // The same picture as the base color: its alpha is already applied through `map`.

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
-import { app, loadIndex, entry, updateEntry, saveThumbnail, savePrefs, blobToBase64 } from './app.js';
+import { app, loadIndex, entry, updateEntry, saveThumbnail, savePrefs, blobToBase64, thumbOutdated } from './app.js';
 import { call, on as onHost, dropPaths, basename, extname, dirname, stem, joinPath, blendThumbUrl, newJobId, hasHost } from './host.js';
 import { hydrateIcons } from './icons.js';
 import { $, h, ic, toast, showMenu, menuAt, closePopover, closeMenu, store, debounce, fmtBytes, setChildren, setLengthUnit } from './dom.js';
@@ -188,7 +188,7 @@ export async function open(path, { force = false } = {}) {
     refreshPanel();
 
     // Library thumbnail + facts, taken in the rest pose before any clip plays.
-    const stale = !e?.thumb || (!e.thumbManual && e.thumbFor && stat?.modified && new Date(e.thumbFor).getTime() !== new Date(stat.modified).getTime());
+    const stale = !e?.thumb || thumbOutdated(path, e) || (!e.thumbManual && e.thumbFor && stat?.modified && new Date(e.thumbFor).getTime() !== new Date(stat.modified).getTime());
     if (stale || !e?.meta) {
       try {
         if (stale) await saveThumbnail(path, await viewer.thumbnail({ size: 384 }), { modelStamp: stat?.modified });

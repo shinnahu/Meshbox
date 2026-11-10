@@ -317,7 +317,12 @@ function renderMaterials(body, info) {
   if (!list.length) { body.append(h('div.panel-empty', 'This model has no materials.')); return; }
   if (extname(path) !== '.fbx') {
     body.append(h('div.banner.compact', ic('info', 15), h('div.grow', 'Changing materials and saving them into the file works with FBX models.')));
-    for (const { material: m, meshes } of list) body.append(group(`mat:${m.name}`, m.name || '(unnamed)', 'droplet', { badge: swatch(m) }, h('div.mat-meta', ic('box', 13), meshes.join(', '))));
+    for (const { material: m, meshes } of list) {
+      const glow = m.emissiveMap ? texLine('Emission', m.emissiveMap, null, sameTex(m.emissiveMap, m.map) ? 'Same image as Base Color' : null)
+        : m.emissive && m.emissive.getHex() !== 0 && m.emissiveIntensity > 0 ? texLine('Emission', null, m.emissive) : null;
+      body.append(group(`mat:${m.name}`, m.name || '(unnamed)', 'droplet', { badge: swatch(m) },
+        h('div.mat-meta', ic('box', 13), meshes.join(', ')), texLine('Base Color', m.map, m.color), glow));
+    }
     return;
   }
 
@@ -373,16 +378,25 @@ function renderMaterials(body, info) {
     const name = m.name || '';
     if (!st.file.has(m)) st.file.set(m, { emission: m.emissiveIntensity ?? 1, roughness: fbxRoughness(m.shininess) });
     const file = st.file.get(m);
-    const kids = [h('div.mat-meta', ic('box', 13), meshes.join(', '))];
+    const kids = [h('div.mat-meta', ic('box', 13), meshes.join(', ')), texLine('Base Color', m.map, m.color)];
+    // Emission comes from its own texture (a glow mask, lit windows...), from the base color texture, or from a color.
     const glows = !!m.emissiveMap || (m.emissive && m.emissive.getHex() !== 0);
     if (glows) {
       let last = m.emissiveIntensity > 0 ? m.emissiveIntensity : (file.emission > 0 ? file.emission : 1);
-      const apply = (v) => { setEmission(m, v); mark(name, { EmissiveFactor: +v.toFixed(4) }, Math.abs(v - file.emission) < 1e-4); };
+      const sub = h('div.mat-sub');
+      const apply = (v) => {
+        setEmission(m, v);
+        sub.classList.toggle('off', !(v > 0));
+        mark(name, { EmissiveFactor: +v.toFixed(4) }, Math.abs(v - file.emission) < 1e-4);
+      };
       const strength = sliderRow(0, 10, 0.05, m.emissiveIntensity, (v) => { if (v > 0) last = v; apply(v); toggle.setValue(v > 0); },
         { fmt: (v) => (+v).toFixed(2), def: +file.emission.toFixed(2) });
-      const toggle = toggleRow('Emission', m.emissiveMap ? 'Glows with its texture' : 'Glows with its color', m.emissiveIntensity > 0,
-        (on) => { const v = on ? last : 0; apply(v); strength.setValue(v); });
-      kids.push(toggle, fieldRow('Strength', 'How bright the glow is (the FBX EmissiveFactor: Blender reads it as Emission Strength, Unity as the emission intensity). 0 turns it off.', strength));
+      const toggle = toggleRow('Emission', null, m.emissiveIntensity > 0, (on) => { const v = on ? last : 0; apply(v); strength.setValue(v); });
+      sub.classList.toggle('off', !(m.emissiveIntensity > 0));
+      sub.append(
+        m.emissiveMap ? texLine('Texture', m.emissiveMap, null, sameTex(m.emissiveMap, m.map) ? 'Same image as Base Color' : null) : texLine('Color', null, m.emissive),
+        fieldRow('Strength', 'How bright the glow is (the FBX EmissiveFactor: Blender reads it as Emission Strength, Unity as the emission intensity). 0 turns it off.', strength));
+      kids.push(toggle, sub);
     } else kids.push(h('div.note', 'No emission'));
     if (m.isMeshPhongMaterial) {
       const rough = sliderRow(0, 1, 0.01, +fbxRoughness(m.shininess).toFixed(2), (r) => {
@@ -399,9 +413,24 @@ function renderMaterials(body, info) {
 
 /** A small preview of the material's base color (texture or color) for its group header. */
 function swatch(m) {
-  const src = m.map?.source?.data?.currentSrc || m.map?.source?.data?.src;
+  const src = texSrc(m.map);
   if (src) return h('img.mat-swatch', { src, alt: '' });
   return h('span.mat-swatch', { style: { background: m.color ? `#${m.color.getHexString()}` : 'transparent' } });
+}
+
+const texSrc = (t) => t?.source?.data?.currentSrc || t?.source?.data?.src || '';
+const texName = (t) => { const s = texSrc(t); return !s || /^(blob|data):/.test(s) ? 'Embedded image' : decodeURIComponent(s).split(/[\\/]/).pop(); };
+const sameTex = (a, b) => !!a && !!b && (a === b || a.source === b.source || (!!texSrc(a) && texSrc(a) === texSrc(b)));
+
+/** "Base Color  [image] T_Hero_Body_BaseColor.png" (or the color when no texture drives it). */
+function texLine(label, tex, color, note) {
+  const hex = color ? '#' + color.getHexString().toUpperCase() : null;
+  return h('div.tex-line',
+    h('span.k', label),
+    tex ? h('img.mat-tex', { src: texSrc(tex), alt: '' }) : h('span.mat-tex', { style: { background: hex || 'transparent' } }),
+    // long names break after "_" and "." (T_Hero_Body_ | BaseColor.png), not in the middle of a word
+    h('span.v', { title: tex ? texName(tex) : hex }, ...(tex ? texName(tex).split(/(?<=[_.\-])/).flatMap((p) => [p, h('wbr')]) : [hex || 'None'])),
+    note ? h('span.tag', note) : null);
 }
 
 function renderSize(body, info) {
