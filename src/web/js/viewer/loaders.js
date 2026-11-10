@@ -15,6 +15,7 @@ import { USDZLoader } from 'three/examples/jsm/loaders/USDZLoader.js';
 import { TGALoader } from 'three/examples/jsm/loaders/TGALoader.js';
 import { TIFFLoader } from 'three/examples/jsm/loaders/TIFFLoader.js';
 import { fileUrl, urlToPath, searchUrl, call, basename } from '../host.js';
+import { fixLegacyMaterials } from './materials.js';
 
 export const MODEL_EXTS = ['.fbx', '.glb', '.gltf', '.vrm', '.obj', '.stl', '.ply', '.dae', '.3ds', '.3mf', '.usdz', '.blend'];
 const IMAGE_RE = /\.(png|jpe?g|tga|bmp|gif|webp|tiff?|psd|dds|exr|hdr|ktx2)(\?|$)/i;
@@ -300,6 +301,8 @@ export async function loadModel(path, { renderer, onProgress, signal, displayNam
     await Promise.race([new Promise((r) => { idleResolve = r; }), new Promise((r) => setTimeout(r, 45000))]);
   }
 
+  // FBX/OBJ/Collada/3DS never say how a texture's alpha should be used: work it out from the images.
+  if (!/^\.(glb|gltf|vrm|usdz|3mf|stl|ply)$/.test(ext)) fixLegacyMaterials(result.root, { fbx: ext === '.fbx' });
   result.textures = await textureReport(result.root, seen);
   result.displayName = displayName || basename(path);
   return result;

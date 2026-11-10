@@ -27,8 +27,98 @@ function copyCommon(dst, src, keys = COPY_KEYS) {
     else dst[k] = v;
   }
   if (src.color && dst.color) dst.color.copy(src.color);
+  if (dst.alphaMap && src.userData.alphaMapChannel === 'a') alphaMapFromAlpha(dst);
   dst.userData.source = src;
   return dst;
+}
+
+/** three.js reads alphaMap from the green channel; an RGBA cut-out image keeps its alpha in A. */
+function alphaMapFromAlpha(mat) {
+  mat.onBeforeCompile = (shader) => {
+    shader.fragmentShader = shader.fragmentShader.replace('#include <alphamap_fragment>',
+      '#ifdef USE_ALPHAMAP\n\tdiffuseColor.a *= texture2D( alphaMap, vAlphaMapUv ).a;\n#endif');
+  };
+  mat.customProgramCacheKey = () => 'alphaMapA';
+}
+
+// ---------------------------------------------------------------- legacy (FBX/OBJ/DAE/3DS) alpha
+// Those formats only say "this image drives transparency", never how: Blender's FBX exporter links the
+// base color image a second time as the alpha texture, which three.js would read from the green channel
+// (dark eyes turn see-through), and every alpha link becomes a blended material. Here each one is
+// sorted by what its image really holds: no transparency (opaque), a cut-out (alpha test at 0.5 like
+// Blender's "Alpha > 0.5" or Unity's Cutout, only the anti-aliased rim blends) or real see-through alpha.
+
+/** Alpha content of an image: 'none' | 'cutout' | 'soft', or null while it has not loaded. */
+function alphaKind(texture, channel, cache) {
+  const img = texture?.source?.data;
+  const w0 = img?.naturalWidth || img?.width || 0, h0 = img?.naturalHeight || img?.height || 0;
+  if (!w0 || !h0 || img.complete === false) return null;
+  const key = (img.currentSrc || img.src || texture.source.uuid) + '|' + channel;
+  if (cache.has(key)) return cache.get(key);
+  let kind = null;
+  try {
+    let data;
+    if (img.data && img.data.length === w0 * h0 * 4) data = img.data;            // DataTexture (TGA/PSD/TIFF)
+    else {
+      const s = Math.min(1, 512 / Math.max(w0, h0));
+      const w = Math.max(1, Math.round(w0 * s)), h = Math.max(1, Math.round(h0 * s));
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      const g = c.getContext('2d', { willReadFrequently: true });
+      g.imageSmoothingEnabled = false;   // real texels: averaging would invent soft edges
+      g.drawImage(img, 0, 0, w, h);
+      data = g.getImageData(0, 0, w, h).data;
+    }
+    const off = channel === 'a' ? 3 : 1;
+    let visible = 0, soft = 0, clear = 0;
+    for (let i = off; i < data.length; i += 4) {
+      const a = data[i];
+      if (a < 8) clear++;
+      else { visible++; if (a < 248) soft++; }
+    }
+    kind = !clear && soft / Math.max(1, visible) < 0.002 ? 'none' : soft / Math.max(1, visible) <= 0.4 ? 'cutout' : 'soft';
+  } catch { /* unreadable image: leave the material as it is */ }
+  cache.set(key, kind);
+  return kind;
+}
+
+const sameImage = (a, b) => a && b && (a.source === b.source || a.source?.data === b.source?.data
+  || (!!(a.source?.data?.src) && a.source.data.src === b.source?.data?.src));
+const hasAlphaChannel = (t, cache) => { const k = alphaKind(t, 'a', cache); return k && k !== 'none'; };
+
+/**
+ * Call once per loaded model (legacy formats, textures loaded). `fbx`: roughness from Shininess the way
+ * Blender writes it and Unity reads it, and emission textures used as FBX defines them.
+ */
+export function fixLegacyMaterials(root, { fbx = false } = {}) {
+  const cache = new Map();
+  const done = new Set();
+  root.traverse((o) => {
+    for (const m of (Array.isArray(o.material) ? o.material : [o.material])) {
+      if (!m || done.has(m)) continue;
+      done.add(m);
+      if (fbx) m.userData.fbxShininess = true;
+      // A texture on EmissiveColor replaces the color (FBX, Blender and Unity agree); FBXLoader keeps it black.
+      if (fbx && m.emissiveMap && m.emissive && m.emissive.getHex() === 0 && (m.emissiveIntensity ?? 1) > 0) m.emissive.set(0xffffff);
+      if (!m.map && !m.alphaMap) continue;
+      if (!(m.transparent || m.alphaMap || m.alphaTest > 0)) continue;
+      // The same picture as the base color: its alpha is already applied through `map`.
+      if (m.alphaMap && sameImage(m.alphaMap, m.map)) m.alphaMap = null;
+      let kind;
+      if (m.alphaMap) {
+        const a = hasAlphaChannel(m.alphaMap, cache);
+        if (a) m.userData.alphaMapChannel = 'a';
+        kind = alphaKind(m.alphaMap, a ? 'a' : 'g', cache);
+        if (m.map && kind) { const k2 = alphaKind(m.map, 'a', cache); if (k2 === 'soft' || (k2 === 'cutout' && kind === 'none')) kind = k2; }
+      } else kind = alphaKind(m.map, 'a', cache);
+      if (!kind || m.opacity < 1) { m.needsUpdate = true; continue; }   // a see-through factor stays blended
+      if (kind === 'none') { m.transparent = false; m.alphaTest = 0; }
+      else if (kind === 'cutout') { m.transparent = true; m.alphaTest = 0.5; m.depthWrite = true; }
+      else m.transparent = true;
+      m.userData.alphaKind = kind;
+      m.needsUpdate = true;
+    }
+  });
 }
 
 /** Phong/Lambert (FBX, OBJ) → MeshStandardMaterial, so image based lighting applies. */
@@ -37,10 +127,11 @@ export function toPBR(m) {
   const std = copyCommon(new THREE.MeshStandardMaterial(), m);
   let roughness = 0.65;
   if (m.isMeshPhongMaterial) {
-    const s = m.shininess ?? 30;
-    // Blender's FBX exporter writes shininess as (1 - roughness) * 10; other DCCs use Phong exponents.
-    roughness = s <= 10.5 ? 1 - s / 10 : Math.sqrt(2 / (s + 2));
-    roughness = Math.min(1, Math.max(0.08, roughness));
+    const s = Math.max(0, m.shininess ?? 30);
+    // FBX: Blender writes Shininess = ((1 - roughness) × 10)² and Unity reads smoothness = √(Shininess / 100),
+    // so roughness = 1 - √Shininess / 10 matches both. Other formats: a Phong exponent → perceptual roughness.
+    roughness = m.userData.fbxShininess ? 1 - Math.sqrt(Math.min(s, 100)) / 10 : Math.pow(2 / (s + 2), 0.25);
+    roughness = Math.min(1, Math.max(0.04, roughness));
     if (m.specularMap) std.roughnessMap = null;
   }
   std.roughness = roughness;

@@ -48,6 +48,11 @@ Meshbox → Always.
   elsewhere), perspective / ortho
   (`O`, numpad `5`), Blender-style numpad views `1 3 7`, turntable (`T`), full screen (`F11`), the XYZ
   gizmo is clickable.
+- **Materials** from FBX, OBJ, Collada and 3DS are read the way Blender and Unity read them: transparency
+  comes from what the texture really holds (cut-outs like eyes, lashes and decals stay solid with clean
+  edges, see-through glass stays see-through, an alpha link on an opaque image is ignored), roughness
+  comes from FBX shininess with Unity's formula, and emission textures glow when their strength is
+  above 0.
 - **Topology** (top left): Faces, Vertices (true polygon counts for FBX and .blend), triangles, bones.
 - **Animations**: clip list, play/pause, scrub, speed, loop, rest pose. *Load animations or poses…*
   adds clips from other files: same bone names play directly (Unity-style `Model@Clip.fbx` files next
