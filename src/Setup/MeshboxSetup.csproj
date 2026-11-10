@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- One-file installer with its own WPF window. build.ps1 zips dist\Meshbox and passes it in as -p:PayloadZip=... -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>MeshboxSetup</AssemblyName>
+    <RootNamespace>MeshboxSetup</RootNamespace>
+    <StartupObject>MeshboxSetup.Program</StartupObject>
+    <ApplicationIcon>..\Host\app.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Product>Meshbox</Product>
+    <AssemblyTitle>Meshbox Setup</AssemblyTitle>
+    <Version>1.4.0</Version>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="..\Host\app.ico" Link="app.ico" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(PayloadZip)' != ''">
+    <EmbeddedResource Include="$(PayloadZip)" LogicalName="payload.zip" />
+  </ItemGroup>
+
+</Project>

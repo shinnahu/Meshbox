@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Meshbox app icon for 16 to 32 px: same design, bigger cube, flat colors, edges on the pixel grid. -->
+  <defs>
+    <linearGradient id="tile" x1="9" y1="1" x2="23" y2="31" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5AAAFF"/>
+      <stop offset="1" stop-color="#1C52F0"/>
+    </linearGradient>
+  </defs>
+  <rect x="1" y="1" width="30" height="30" rx="6.5" fill="url(#tile)"/>
+  <g stroke-linejoin="round" stroke-width="0.25">
+    <path d="M6 9.5 L17.5 6 L17.5 20.5 L6 23 Z" fill="#F7F8FF" stroke="#F7F8FF"/>
+    <path d="M17.5 6 L26 10.5 L26 24 L17.5 20.5 Z" fill="#D8DAF6" stroke="#D8DAF6"/>
+    <path d="M6 23 L17.5 20.5 L26 24 L15 26.5 Z" fill="#B3B2E6" stroke="#B3B2E6"/>
+  </g>
+</svg>

@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Meshbox app icon (40 px and up). Blue tile, white cube seen from slightly below.
+       tools/make-icon.mjs renders it into src/Host/app.ico together with meshbox-small.svg. -->
+  <defs>
+    <linearGradient id="tile" x1="70" y1="6" x2="186" y2="250" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#66B3FF"/>
+      <stop offset="0.5" stop-color="#3B83FF"/>
+      <stop offset="1" stop-color="#1A50F0"/>
+    </linearGradient>
+    <radialGradient id="sheen" cx="72" cy="34" r="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.26"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="front" x1="58" y1="60" x2="138" y2="182" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E9EBFB"/>
+    </linearGradient>
+    <linearGradient id="right" x1="140" y1="60" x2="200" y2="184" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#E8E9FA"/>
+      <stop offset="1" stop-color="#D0D2F3"/>
+    </linearGradient>
+    <linearGradient id="bottom" x1="58" y1="166" x2="198" y2="196" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#C8C8EF"/>
+      <stop offset="1" stop-color="#ACABE0"/>
+    </linearGradient>
+    <filter id="soft" x="-40%" y="-80%" width="180%" height="260%">
+      <feGaussianBlur stdDeviation="10"/>
+    </filter>
+    <clipPath id="tileClip">
+      <rect x="10" y="10" width="236" height="236" rx="46"/>
+    </clipPath>
+  </defs>
+  <rect x="10" y="10" width="236" height="236" rx="46" fill="url(#tile)"/>
+  <rect x="10" y="10" width="236" height="236" rx="46" fill="url(#sheen)"/>
+  <g clip-path="url(#tileClip)">
+    <!-- the cube's soft shadow on the tile -->
+    <path d="M76 200 L152 182 L218 204 L134 226 Z" fill="#0A2C9A" opacity="0.34" filter="url(#soft)"/>
+  </g>
+  <g stroke-linejoin="round" stroke-width="1.2">
+    <path d="M59 82 L140 58 L140 161 L56 179 Z" fill="url(#front)" stroke="url(#front)"/>
+    <path d="M140 58 L197 90 L200 184 L140 161 Z" fill="url(#right)" stroke="url(#right)"/>
+    <path d="M56 179 L140 161 L200 184 L120 198 Z" fill="url(#bottom)" stroke="url(#bottom)"/>
+  </g>
+  <rect x="10.5" y="10.5" width="235" height="235" rx="45.5" fill="none" stroke="#0A36B8" stroke-opacity="0.22"/>
+</svg>

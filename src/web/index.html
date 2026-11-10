@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meshbox</title>
+<link rel="icon" href="assets/favicon.ico">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg class="logo" viewBox="1 1 30 30" aria-hidden="true">
+      <defs><linearGradient id="mbTile" x1="9" y1="1" x2="23" y2="31" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#5AAAFF"/><stop offset="1" stop-color="#1C52F0"/></linearGradient></defs>
+      <rect x="1" y="1" width="30" height="30" rx="6.5" fill="url(#mbTile)"/>
+      <g stroke-linejoin="round" stroke-width="0.25">
+        <path d="M6 9.5 L17.5 6 L17.5 20.5 L6 23 Z" fill="#F7F8FF" stroke="#F7F8FF"/>
+        <path d="M17.5 6 L26 10.5 L26 24 L17.5 20.5 Z" fill="#D8DAF6" stroke="#D8DAF6"/>
+        <path d="M6 23 L17.5 20.5 L26 24 L15 26.5 Z" fill="#B3B2E6" stroke="#B3B2E6"/>
+      </g>
+    </svg>
+    <span class="brand-name">Meshbox</span>
+  </div>
+  <button class="file-chip" id="fileChip" type="button" hidden data-tip="Recent files" data-tip-pos="bottom">
+    <span class="fmt" id="fileFmt">FBX</span><span class="name" id="fileName"></span><i data-icon="chevron-down" data-size="15"></i>
+  </button>
+  <button class="icon-btn file-close" id="btnCloseModel" type="button" hidden data-tip="Close model (Ctrl+W)" data-tip-pos="bottom" aria-label="Close model"><i data-icon="x" data-size="16"></i></button>
+  <div class="spacer"></div>
+  <nav class="top-actions">
+    <button class="top-btn" id="btnOpen" type="button" data-tip="Open a model (Ctrl+O)" data-tip-pos="bottom"><i data-icon="folder-open" data-size="17"></i>Open</button>
+    <button class="top-btn" id="btnLibrary" type="button" data-tip="Your models, versions and cleanup (L)" data-tip-pos="bottom"><i data-icon="library" data-size="17"></i>Library</button>
+    <button class="top-btn" id="btnOrganize" type="button" hidden data-tip="Copy this model into your library folder: one .blend, one Unity FBX, textures with standard names, old versions archived" data-tip-pos="bottom-end"><i data-icon="archive" data-size="17"></i>Organize</button>
+    <span class="top-sep"></span>
+    <button class="icon-btn" id="btnNewWindow" type="button" data-tip="New window (Ctrl+N)" data-tip-pos="bottom-end" aria-label="New window"><i data-icon="app-window"></i></button>
+    <button class="icon-btn" id="btnSettings" type="button" data-tip="Settings" data-tip-pos="bottom-end" aria-label="Settings"><i data-icon="settings"></i></button>
+  </nav>
+</header>
+
+<main class="shell panel-closed" id="shell">
+  <nav class="rail" id="rail" aria-label="Panels">
+    <button type="button" class="rail-btn" data-panel="info" data-tip="Model info (I)" data-tip-pos="right" aria-label="Model info"><i data-icon="info" data-size="20"></i></button>
+    <button type="button" class="rail-btn" data-panel="anim" data-tip="Animations (A)" data-tip-pos="right" aria-label="Animations"><i data-icon="film" data-size="20"></i></button>
+    <button type="button" class="rail-btn" data-panel="size" data-tip="Size &amp; facing (S)" data-tip-pos="right" aria-label="Size and facing"><i data-icon="ruler" data-size="20"></i></button>
+    <button type="button" class="rail-btn" data-panel="export" data-tip="Export for Unity (E)" data-tip-pos="right" aria-label="Export"><i data-icon="download" data-size="20"></i></button>
+  </nav>
+  <section class="panel" id="panel" aria-live="polite"></section>
+  <section class="stage">
+    <div class="canvas-wrap" id="canvasWrap">
+      <canvas class="gl" id="gl" tabindex="0"></canvas>
+      <dl class="stats" id="stats" hidden></dl>
+      <div class="dims" id="dims" hidden></div>
+      <div class="gizmo" id="gizmo" hidden></div>
+      <div class="side-tools" id="sideTools"></div>
+      <div class="view-bar" id="viewBar"></div>
+      <div class="anim-bar" id="animBar" hidden></div>
+      <div class="empty" id="empty" hidden></div>
+      <div class="loading" id="loading" hidden></div>
+    </div>
+  </section>
+  <section class="library" id="library" hidden></section>
+</main>
+
+<div class="toasts" id="toasts" role="status"></div>
+<script type="module" src="dist/app.js"></script>
+</body>
+</html>

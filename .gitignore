@@ -1,0 +1,24 @@
+# build output (.\build.ps1)
+dist/
+obj/
+src/**/bin/
+src/**/obj/
+src/web/dist/
+
+# made by the build from node_modules (tools/patch-fbxloader.mjs, tools/build-web.mjs)
+node_modules/
+src/web/js/vendor/FBXLoader.js
+src/web/assets/draco/
+src/web/assets/basis/
+
+# local design references (screenshots of other apps)
+References/
+
+# editors, Python, logs
+.vs/
+.vscode/
+*.user
+__pycache__/
+*.pyc
+diag.on
+diag.log
