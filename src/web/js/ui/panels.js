@@ -428,8 +428,8 @@ function texLine(label, tex, color, note) {
   return h('div.tex-line',
     h('span.k', label),
     tex ? h('img.mat-tex', { src: texSrc(tex), alt: '' }) : h('span.mat-tex', { style: { background: hex || 'transparent' } }),
-    // long names break after "_" and "." (T_Hero_Body_ | BaseColor.png), not in the middle of a word
-    h('span.v', { title: tex ? texName(tex) : hex }, ...(tex ? texName(tex).split(/(?<=[_.\-])/).flatMap((p) => [p, h('wbr')]) : [hex || 'None'])),
+    // long names break after "_" or "-" (T_Hero_Body_ | BaseColor.png), not in the middle of a word
+    h('span.v', { title: tex ? texName(tex) : hex }, ...(tex ? texName(tex).split(/(?<=[_\-])/).flatMap((p) => [p, h('wbr')]) : [hex || 'None'])),
     note ? h('span.tag', note) : null);
 }
 
