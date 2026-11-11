@@ -8,7 +8,7 @@ three.js viewport, made for getting models into Unity at the right size, facing 
 
 ## Install
 
-Download **MeshboxSetup.exe** from the [latest release](https://github.com/shinnahu/meshbox/releases/latest)
+Download **MeshboxSetup.exe** from the [latest release](https://github.com/shinnahu/Meshbox/releases/latest)
 and run it (one file, about 10 MB, no admin rights needed), or build it yourself (below).
 The setup window shows where Meshbox goes and its progress: it installs Meshbox for your Windows account
 in `%LOCALAPPDATA%\Programs\Meshbox`, adds it to the Start menu and to "Open with" for 3D files, and to
